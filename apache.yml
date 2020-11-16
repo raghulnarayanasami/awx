@@ -1,0 +1,33 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: yes
+  vars:
+    var1: []
+    var2: []
+    var: "{{apache_version}}"
+    distribution: "{{distribution}}"
+  tasks:
+    - command: apache2 -v
+      register: output
+    - debug:
+        msg: "{{output.stdout_lines[0]}}"
+      when: "var not in output.stdout_lines[0]"
+    - block:
+        - set_fact:
+            var1: "{{var1}}+['{{ansible_hostname}}: {{ansible_default_ipv4.address}}']"
+          when: "var not in output.stdout_lines[0]"
+        - set_fact:
+            var2: "{{var2}}+['{{ansible_hostname}}: {{ansible_default_ipv4.address}}']"
+          when: "var in output.stdout_lines[0]"
+      when: ansible_distribution == distribution
+- hosts: all
+  gather_facts: yes
+  become: yes
+  tasks:
+    - debug:
+        msg: "non-compliant servers: {{var1}}"
+      when: var1 is defined
+    - debug:
+        msg: "compliant servers: {{var2}}"
+      when: var2 is defined
